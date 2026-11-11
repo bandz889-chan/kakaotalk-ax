@@ -21,6 +21,12 @@ UI_TOOLS = frozenset({"kakaotalk_ax_rooms", "kakaotalk_ax_search_rooms", "kakaot
                       "kakaotalk_ax_search", "kakaotalk_ax_close_search", "kakaotalk_ax_read_attachment"})
 
 
+def venv_python(root):
+    """The project interpreter: .venv/bin/python on macOS, .venv\\Scripts\\python.exe on Windows."""
+    windows = root / ".venv/Scripts/python.exe"
+    return windows if os.name == "nt" or windows.is_file() and not (root / ".venv/bin/python").is_file() else root / ".venv/bin/python"
+
+
 def checked_arguments(name, arguments):
     if not isinstance(arguments, dict):
         raise ValueError("Tool arguments must be a JSON object")
@@ -64,7 +70,7 @@ async def invoke(root, name, arguments, timeout):
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
 
-    parameters = StdioServerParameters(command=str(root / ".venv/bin/python"), args=["-m", "kakaotalk_automation", "mcp"])
+    parameters = StdioServerParameters(command=str(venv_python(root)), args=["-m", "kakaotalk_automation", "mcp"])
     async with stdio_client(parameters) as (read, write):
         async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=timeout)) as session:
             await session.initialize()
@@ -91,11 +97,14 @@ def main():
     call.add_argument("--args-file", type=Path)
     args = parser.parse_args()
     root = args.root.expanduser().absolute()
-    python = root / ".venv/bin/python"
+    python = venv_python(root)
     if not python.is_file():
         print(json.dumps({"status": "setup_required", "projectRoot": str(root), "detail": "Project .venv is missing"}))
         return 1
     if Path(sys.prefix).resolve() != (root / ".venv").resolve():
+        if os.name == "nt":  # execv does not replace the process on Windows; keep stdio attached.
+            import subprocess
+            return subprocess.call([str(python), str(Path(__file__).absolute()), *sys.argv[1:]])
         os.execv(str(python), [str(python), str(Path(__file__).absolute()), *sys.argv[1:]])
     sending_operation = None
     try:
