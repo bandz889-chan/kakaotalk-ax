@@ -63,3 +63,13 @@ macOS 14.2+ 및 화면 기록 권한이 필요하다. 이미지는 원본 파일
 `searchVerified=false`/`partial`은 검색 동작의 결과가 확인되지 않았다는 뜻이다.
 `stopReason`을 확인하고 방문 범위 밖의 결과를 없다고 판단하지 않는다.
 중첩 스냅샷의 결과는 중복될 수 있으며 `total`은 고유 메시지 수가 아니다.
+
+
+## Windows 백엔드 (실험)
+
+`sys.platform == "win32"`이면 `kakaotalk_automation.NativeAX`가 `kakaotalk_windows.WindowsKakao`를 가리킨다.
+메서드 이름·인수·결과 키는 같고 `source`만 `windows_win32`다. Windows 전용 이유 코드:
+`kakaotalk_main_window_not_found`, `room_search_field_not_found`, `room_not_found_by_search`,
+`opened_room_title_mismatch`, `message_list_not_unique`, `composer_not_unique`, `copy_not_observed`,
+`composer_text_mismatch`, `self_room_not_verifiable_on_windows`, `attachment_capture_not_supported_on_windows`,
+`room_list_requires_uiautomation_package`, `room_list_not_exposed_on_windows`.
