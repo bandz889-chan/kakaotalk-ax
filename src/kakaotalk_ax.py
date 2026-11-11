@@ -1,6 +1,5 @@
-"""Native macOS Accessibility operations for KakaoTalk."""
+"""Native KakaoTalk operations shared by the macOS AX and Windows backends."""
 
-import fcntl
 import hashlib
 import json
 import os
@@ -10,6 +9,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
+
+from kakaotalk_lock import O_NOFOLLOW, try_lock, unlock
 
 # Preserve the existing journals and shared lock to avoid duplicate dispatches
 # across old/new command names. These directories contain helper state, not app data.
@@ -31,10 +32,10 @@ def ui_session():
                 _local.depth -= 1
             return
         UI_ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
-        descriptor = os.open(UI_ROOT / ".lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        descriptor = os.open(UI_ROOT / ".lock", os.O_CREAT | os.O_RDWR | O_NOFOLLOW, 0o600)
         try:
             try:
-                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                try_lock(descriptor)
             except BlockingIOError:
                 raise ValueError("Another KakaoTalk AX operation is in progress") from None
             _local.depth = 1
@@ -42,6 +43,7 @@ def ui_session():
                 yield
             finally:
                 _local.depth = 0
+                unlock(descriptor)
         finally:
             os.close(descriptor)
 
@@ -71,6 +73,8 @@ def query_text(value, empty=False):
 
 
 class AXOperations:
+    source = "macos_accessibility"
+
     def rooms(self, query=""):
         """Read the exposed main chat list; query is a literal local name filter."""
         query_text(query, empty=True)
@@ -166,7 +170,7 @@ class AXOperations:
                     cleanup.append({"status": "failed", "windowTitle": name, "errorType": type(error).__name__})
         succeeded = sum(item.get("status") == "ok" for item in items)
         return {"status": "ok" if succeeded == len(items) and all(c.get("status") == "ok" for c in cleanup) else "partial",
-                "source": "macos_accessibility", "items": items, "total": len(items), "succeeded": succeeded,
+                "source": self.source, "items": items, "total": len(items), "succeeded": succeeded,
                 "windowsOpened": opened, "cleanup": cleanup, "databaseCalls": 0,
                 "parallel": max_workers > 1 and len(window_titles) > 1,
                 "atomicAcrossRooms": False, "elapsedMs": round((time.monotonic()-started)*1000, 1)}
@@ -193,7 +197,7 @@ class AXOperations:
                 if after["snapshotId"] == previous["snapshotId"]:
                     break
                 previous = after
-            return {"status": "ok", "source": "macos_accessibility", "windowTitle": window_title,
+            return {"status": "ok", "source": self.source, "windowTitle": window_title,
                     "steps": steps, "pagesAttempted": len(steps),
                     "contentChanged": before["snapshotId"] != after["snapshotId"],
                     "exposedRowsBefore": before["coverage"]["exposedRowCount"],
@@ -278,7 +282,7 @@ class AXOperations:
                 if native and native.get("searchState", {}).get("previousEnabled") is False:
                     stop_reason = "navigation_exhausted"
                     break
-            return {"status": "ok" if verified else "partial", "source": "macos_accessibility",
+            return {"status": "ok" if verified else "partial", "source": self.source,
                     "windowTitle": window_title, "query": query, "items": matches[:limit],
                     "total": len(matches), "truncated": len(matches) > limit,
                     "coverage": {**coverage, "historyComplete": False, "snapshotsVisited": len(seen_snapshots)},
@@ -319,13 +323,14 @@ class AXSendEngine:
     def load(self, path):
         if not path.exists():
             return None
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        fd = os.open(path, os.O_RDONLY | O_NOFOLLOW)
         with os.fdopen(fd) as stream:
             return json.load(stream)
 
     def output(self, record, **extra):
+        source = getattr(self.native, "source", "macos_accessibility")
         return {"status": record["phase"], "operationId": record["operationId"], "windowTitle": record["windowTitle"],
-                "source": "macos_accessibility", "confirmationSource": "macos_accessibility",
+                "source": source, "confirmationSource": source,
                 "databaseCalls": 0, "retrySafe": False, "reason": record.get("reason"),
                 "native": record.get("native"), **extra}
 

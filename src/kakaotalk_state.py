@@ -1,11 +1,12 @@
 """Private, atomic AX send journals and process locks (no app data access)."""
 
-import fcntl
 import hashlib
 import json
 import os
 import tempfile
 from contextlib import contextmanager
+
+from kakaotalk_lock import O_NOFOLLOW, fsync_directory, try_lock, unlock
 
 
 def digest(value):
@@ -20,11 +21,7 @@ def save_private(path, value):
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, path)
-        directory = os.open(path.parent, os.O_RDONLY)
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        fsync_directory(path.parent)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
@@ -33,12 +30,15 @@ def save_private(path, value):
 @contextmanager
 def send_lock(root):
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    descriptor = os.open(root / ".lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    descriptor = os.open(root / ".lock", os.O_CREAT | os.O_RDWR | O_NOFOLLOW, 0o600)
     try:
         try:
-            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            try_lock(descriptor)
         except BlockingIOError:
             raise ValueError("Another KakaoTalk send is in progress") from None
-        yield
+        try:
+            yield
+        finally:
+            unlock(descriptor)
     finally:
         os.close(descriptor)

@@ -1,4 +1,4 @@
-"""Native macOS Accessibility operations for KakaoTalk via CLI and MCP."""
+"""KakaoTalk automation via CLI and MCP: macOS Accessibility, or Win32 on Windows (experimental)."""
 
 import argparse
 import base64
@@ -209,6 +209,12 @@ def ax_row(row):
             "text": "\n".join(bodies) if bodies else None, "sender": None,
             "timeText": times[0][1] if len(times) == 1 else None,
             "dateText": dates[0] if len(set(dates)) == 1 else None, "axParts": parts}
+
+
+MacNativeAX = NativeAX
+if sys.platform == "win32":
+    # Same tool surface, driven through the KakaoTalk PC app's windows instead of macOS AX.
+    from kakaotalk_windows import WindowsKakao as NativeAX  # noqa: F811
 
 
 def main():

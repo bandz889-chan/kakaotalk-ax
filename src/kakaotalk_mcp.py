@@ -18,7 +18,10 @@ mcp = FastMCP("kakaotalk-ax", instructions=(
     "전송은 접근성 입력창과 AXPress 버튼을 사용하며 기존 초안을 보존합니다. "
     "outcome_unknown이나 타임아웃이면 원래 ID로 kakaotalk_ax_send_result만 조회하고 재전송하지 마세요. "
     "observed_in_ax는 새 텍스트와 빈 입력창의 관찰이며 작성자·서버 ACK·읽음 확인이 아닙니다. "
-    "사진은 kakaotalk_ax_read_attachment로 이미지 파일을 받아 직접 확인하세요. OCR은 선택 사항이며 원문과 구분하세요."
+    "사진은 kakaotalk_ax_read_attachment로 이미지 파일을 받아 직접 확인하세요. OCR은 선택 사항이며 원문과 구분하세요. "
+    "Windows(실험)에서는 같은 도구가 카카오톡 PC 창 메시지와 앱의 '전체 선택·복사'로 동작합니다(source=windows_win32). "
+    "Windows에서는 사진 캡처·본인 방 확인(require_self)·앱 내 검색 이동을 지원하지 않고, 방 목록은 uiautomation 패키지가 있을 때만 읽습니다. "
+    "Windows 읽기는 앱이 불러온 메시지만 복사하며 sender는 복사된 텍스트의 [이름] 표기입니다."
 ))
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 SEND = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True)
