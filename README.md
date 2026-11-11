@@ -25,6 +25,44 @@ python3 -m venv .venv
 네이티브 브리지는 소스 해시에 따라 로컬 캐시에 컴파일합니다. Python 기본 기능에는 추가 런타임 의존성이 없고,
 MCP에는 `mcp>=1.30,<2`, 개발용 스킬 검증에는 PyYAML을 사용합니다.
 
+## Windows (실험)
+
+> 이 포크에서 추가한 기능입니다. Windows PC에서 실제 카카오톡으로 아직 검증하지 않았습니다. 처음에는 본인에게만 보이는 방에서 읽기부터 확인하세요.
+
+Windows에서도 같은 `kax` 명령과 13개 MCP 도구를 그대로 씁니다. macOS AX 대신 **실행 중인 카카오톡 PC 앱의 창**을 다룹니다.
+
+| 동작 | Windows에서 하는 방법 |
+| --- | --- |
+| 열린 창 확인 | `KakaoTalk.exe` 프로세스의 창 중 입력창(`RICHEDIT50W`)이 있는 창을 대화방으로 봅니다 |
+| 읽기 | 대화 목록(`EVA_VH_ListControl_Dblclk`)에 앱 기능인 전체 선택·복사(Ctrl+A, Ctrl+C)를 창 메시지로 보내고, 복사된 텍스트를 `[이름] [시각] 본문` 형식으로 나눕니다. 원래 클립보드 텍스트는 되돌려 놓습니다 |
+| 방 열기 | 채팅 탭 검색창에 방 이름을 넣고 Enter. 다른 이름의 방이 열리면 그 창을 닫고 멈춥니다 |
+| 보내기 | 입력창이 비어 있을 때만 본문을 넣고 Enter, 이후 다시 읽어서 새 메시지를 확인합니다 |
+| 이전 대화 | 대화 목록에 마우스 휠 메시지를 보냅니다 |
+| 방 목록 | `uiautomation` 패키지가 있을 때만 UI Automation으로 읽습니다 |
+
+DB 파일, 카톡 서버 통신, 실제 마우스 이동은 쓰지 않습니다.
+
+### 설치 (PowerShell)
+
+Python 3.10 이상과 로그인된 카카오톡 PC 앱이 필요합니다. Swift 빌드는 필요 없습니다.
+
+```
+py -m venv .venv
+.venv\Scripts\pip install -e ".[mcp,windows]"
+.venv\Scripts\kax status
+```
+
+MCP 설정의 `command`는 `C:\\경로\\kakaotalk-ax\\.venv\\Scripts\\kax.exe`, `args`는 `["mcp"]`입니다.
+
+### Windows에서 다른 점
+
+- `sender`가 채워집니다. 복사된 텍스트의 `[이름]` 표기를 그대로 옮긴 값입니다(`senderSource=copied_text`).
+- 읽기는 앱이 지금 불러온 메시지만 복사합니다. 더 이전 대화는 `kakaotalk_ax_load_more`로 먼저 불러오세요.
+- 읽는 동안 클립보드를 잠깐 씁니다. 원래 클립보드가 텍스트가 아니면(이미지 등) 되돌리지 못하고 `clipboardRestored=false`로 알려줍니다.
+- 지원하지 않음: 사진 캡처(`read_attachment`), 본인 방 확인(`require_self=True`), 앱 내 검색 이동. `kakaotalk_ax_search`는 복사된 본문에서 찾습니다.
+- 카카오톡 PC 업데이트로 창 이름(클래스)이 바뀌면 `message_list_not_unique`, `room_search_field_not_found` 같은 이유 코드로 멈춥니다.
+- 다른 사람의 대화를 모으는 데 쓰지 마세요. 계정 제재 가능성이 0%는 아닙니다.
+
 ## Python API
 
 ```python
