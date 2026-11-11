@@ -49,6 +49,14 @@ python3 SKILL_DIR/scripts/kax.py call kakaotalk_ax_send --args-file /absolute/pa
   사용한다. 메서드·도구 대응과 정확한 인수는 [AX API](references/ax-api.md)를 읽는다.
 
 
+## Windows (실험)
+
+같은 도구가 Windows의 카카오톡 PC 앱에서도 동작한다(결과의 `source`가 `windows_win32`). 차이:
+읽기는 앱의 전체 선택·복사 결과라 `sender`가 `[이름]` 표기로 채워지고(`senderSource=copied_text`),
+앱이 불러온 메시지만 포함한다. 사진 캡처·`require_self`·앱 내 검색 이동은 `blocked`로 멈추며,
+방 목록(`kakaotalk_ax_rooms`)은 uiautomation 패키지가 없으면 `room_list_requires_uiautomation_package`다.
+이때는 정확한 방 이름으로 `kakaotalk_ax_open`을 쓴다. Windows 클라이언트 경로는 `.venv\Scripts\python.exe`다.
+
 ## 제공 범위
 
 `status`는 열린 창의 AX 상태를 확인한다.
